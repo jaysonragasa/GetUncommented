@@ -41,7 +41,7 @@ GetUncommented.exe [options]
 
 ## Example Command
 
-```bash
+```CMD
 GetUncommented.exe /include:C:\Projects\ProjectA,C:\Projects\ProjectB /exclude:bin,obj /membertype:public
 ```
 
