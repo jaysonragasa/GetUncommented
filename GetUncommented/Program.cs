@@ -1,151 +1,211 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Text.Json;
 
-public class Program
+class Program
 {
 	static void Main(string[] args)
 	{
-		// Initialize lists for folder paths
-		List<string> folderPaths = new List<string>();
-		List<string> excludedFolders = new List<string>();
+		// Parse the command line arguments
+		var includeFolders = new List<string>();
+		var excludeFolders = new List<string>();
+		string memberType = "all"; // Default to 'all'
 
-		// Parse command line arguments
-		ParseArguments(args, folderPaths, excludedFolders);
-
-		// Prepare output file name with timestamp
-		string outputFileName = $"nocomments_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
-		string outputFilePath = Path.Combine(Directory.GetCurrentDirectory(), outputFileName);
-
-		// Initialize a dictionary to hold the output data organized by file
-		var outputData = new Dictionary<string, List<FileOutput>>();
-
-		foreach (var folderPath in folderPaths)
-		{
-			if (Directory.Exists(folderPath))
-			{
-				ProcessDirectory(folderPath, excludedFolders, outputData);
-			}
-			else
-			{
-				Console.WriteLine($"Folder not found: {folderPath}");
-			}
-		}
-
-		// Write the output data to the JSON file
-		File.WriteAllText(outputFilePath, JsonSerializer.Serialize(outputData, new JsonSerializerOptions { WriteIndented = true }));
-
-		Console.WriteLine($"Output saved to: {outputFilePath}");
-	}
-
-	static void ParseArguments(string[] args, List<string> folderPaths, List<string> excludedFolders)
-	{
 		foreach (var arg in args)
 		{
-			if (arg.StartsWith("/include:", StringComparison.OrdinalIgnoreCase))
-				folderPaths.AddRange(arg.Substring("/include:".Length).Split(',').Select(p => p.Trim()));
-			else if (arg.StartsWith("/exclude:", StringComparison.OrdinalIgnoreCase))
-				excludedFolders.AddRange(arg.Substring("/exclude:".Length).Split(',').Select(p => p.Trim()));
-		}
-	}
+			if (arg.StartsWith("/include:"))
+				includeFolders.AddRange(arg.Substring("/include:".Length).Split(','));
 
-	static void ProcessDirectory(string path, List<string> excludedFolders, Dictionary<string, List<FileOutput>> outputData)
-	{
-		if (IsExcludedDirectory(path, excludedFolders)) return;
+			if (arg.StartsWith("/exclude:"))
+				excludeFolders.AddRange(arg.Substring("/exclude:".Length).Split(','));
 
-		Console.WriteLine($"Processing directory: {path}");
-
-		foreach (var file in Directory.GetFiles(path, "*.cs"))
-		{
-			Console.WriteLine($"Processing file: {file}");
-			ProcessFile(file, outputData);
+			if (arg.StartsWith("/membertype:"))
+				memberType = arg.Substring("/membertype:".Length);
 		}
 
-		foreach (var directory in Directory.GetDirectories(path))
+		// Dictionary to store uncommented members by file
+		var uncommentedMembers = new Dictionary<string, List<object>>();
+
+		// Iterate through each include folder
+		foreach (var folder in includeFolders)
 		{
-			ProcessDirectory(directory, excludedFolders, outputData);
-		}
-	}
-
-	static bool IsExcludedDirectory(string directory, List<string> excludedFolders)
-	{
-		return excludedFolders.Any(ex => string.Equals(Path.GetFileName(directory), ex, StringComparison.OrdinalIgnoreCase));
-	}
-
-	static void ProcessFile(string file, Dictionary<string, List<FileOutput>> outputData)
-	{
-		string code = File.ReadAllText(file);
-		var root = CSharpSyntaxTree.ParseText(code).GetRoot();
-
-		ProcessDeclarations(root, code, outputData, file);
-	}
-
-	static void ProcessDeclarations(SyntaxNode root, string code, Dictionary<string, List<FileOutput>> outputData, string file)
-	{
-		var declarations = root.DescendantNodes()
-			.Where(node => node is ClassDeclarationSyntax || node is EnumDeclarationSyntax || node is InterfaceDeclarationSyntax);
-
-		foreach (var declaration in declarations)
-		{
-			CheckAndAddToOutput(code, outputData, file, declaration);
-
-			foreach (var member in GetPublicMembers(declaration))
+			if (Directory.Exists(folder))
 			{
-				CheckAndAddToOutput(code, outputData, file, member);
+				foreach (var file in Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories))
+				{
+					// Skip excluded folders
+					if (excludeFolders.Any(exclude => file.Contains(exclude, StringComparison.OrdinalIgnoreCase)))
+						continue;
+
+					// Process the file
+					ProcessFile(file, memberType, uncommentedMembers);
+				}
 			}
 		}
+
+		// Write output to a JSON file
+		string outputFile = $"nocomments_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+		File.WriteAllText(outputFile, JsonSerializer.Serialize(uncommentedMembers, new JsonSerializerOptions { WriteIndented = true }));
+
+		// Output the path of the JSON file
+		Console.WriteLine($"Results saved to: {Path.GetFullPath(outputFile)}");
 	}
 
-	static IEnumerable<SyntaxNode> GetPublicMembers(SyntaxNode declaration)
+	// Process a single .cs file
+	static void ProcessFile(string filePath, string memberType, Dictionary<string, List<object>> uncommentedMembers)
 	{
-		return declaration switch
-		{
-			ClassDeclarationSyntax classDecl => classDecl.Members.Where(IsPublicMember),
-			EnumDeclarationSyntax enumDecl => enumDecl.Members,
-			InterfaceDeclarationSyntax interfaceDecl => interfaceDecl.Members.Where(IsPublicMember),
-			_ => Enumerable.Empty<SyntaxNode>()
-		};
-	}
+		var code = File.ReadAllText(filePath);
+		var tree = CSharpSyntaxTree.ParseText(code);
+		var root = tree.GetRoot();
 
-	static bool IsPublicMember(SyntaxNode member)
-	{
-		return member switch
+		// Process classes, interfaces, enums
+		var classesAndStructs = root.DescendantNodes().OfType<TypeDeclarationSyntax>();
+		foreach (var classOrStruct in classesAndStructs)
 		{
-			MethodDeclarationSyntax method => method.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)),
-			PropertyDeclarationSyntax property => property.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)),
-			FieldDeclarationSyntax field => field.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)),
-			ConstructorDeclarationSyntax constructor => constructor.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)),
-			EventDeclarationSyntax eventDecl => eventDecl.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)),
-			_ => false
-		};
-	}
+			AddUncommentedMembers(filePath, classOrStruct, memberType, uncommentedMembers);
+		}
 
-	static void CheckAndAddToOutput(string code, Dictionary<string, List<FileOutput>> outputData, string fileName, SyntaxNode node)
-	{
-		if (!node.GetLeadingTrivia().Any(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-													 trivia.IsKind(SyntaxKind.MultiLineCommentTrivia) ||
-													 trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)))
+		var interfaces = root.DescendantNodes().OfType<InterfaceDeclarationSyntax>();
+		foreach (var interfaceNode in interfaces)
 		{
-			var lineContent = code.Split('\n')[node.GetLocation().GetLineSpan().StartLinePosition.Line].Trim();
-			AddToOutput(outputData, fileName, node is ClassDeclarationSyntax ? "Class" :
-										 node is EnumDeclarationSyntax ? "Enum" :
-										 node is InterfaceDeclarationSyntax ? "Interface" : "Member", lineContent);
+			AddUncommentedMembers(filePath, interfaceNode, memberType, uncommentedMembers);
+		}
+
+		var enums = root.DescendantNodes().OfType<EnumDeclarationSyntax>();
+		foreach (var enumNode in enums)
+		{
+			AddUncommentedMembers(filePath, enumNode, memberType, uncommentedMembers);
 		}
 	}
 
-	static void AddToOutput(Dictionary<string, List<FileOutput>> outputData, string fileName, string type, string name)
+	// Add uncommented members (methods, properties, constructors, classes, enums, interfaces) to the result
+	static void AddUncommentedMembers<T>(string filePath, T node, string memberType, Dictionary<string, List<object>> uncommentedMembers) where T : MemberDeclarationSyntax
 	{
-		if (!outputData.ContainsKey(fileName))
-		{
-			outputData[fileName] = new List<FileOutput>();
-		}
-		outputData[fileName].Add(new FileOutput { Type = type, Name = name });
-	}
-}
+		var members = node.DescendantNodes().OfType<MemberDeclarationSyntax>()
+			.Where(member => IsValidMember(member, memberType))
+			.Where(member => !IsBackingField(member))  // Exclude private backing fields
+			.Where(member => !HasComment(member));     // Ensure it doesn't have comments
 
-public class FileOutput
-{
-	public string Type { get; set; }
-	public string Name { get; set; }
+		foreach (var member in members)
+		{
+			var lineSpan = member.SyntaxTree.GetLineSpan(member.Span);
+			var lineNumber = lineSpan.StartLinePosition.Line + 1;
+
+			if (!uncommentedMembers.ContainsKey(filePath))
+				uncommentedMembers[filePath] = new List<object>();
+
+			// Extract the member declaration based on its type
+			string memberDeclaration = ExtractMemberDeclaration(member);
+
+			uncommentedMembers[filePath].Add(new
+			{
+				Line = lineNumber,
+				Member = memberDeclaration
+			});
+		}
+	}
+
+	// Extracts the member declaration (only the signature or declaration line) and excludes method bodies
+	static string ExtractMemberDeclaration(MemberDeclarationSyntax member)
+	{
+		// Use a StringBuilder for optimized string construction
+		var declaration = new StringBuilder();
+
+		switch (member)
+		{
+			case MethodDeclarationSyntax method:
+				// Build the method signature
+				declaration.Append(string.Join(" ", method.Modifiers) + " ");
+				declaration.Append(method.ReturnType + " ");
+				declaration.Append(method.Identifier.Text + method.ParameterList.ToString());
+				break;
+
+			case PropertyDeclarationSyntax property:
+				// Build the property declaration
+				declaration.Append(string.Join(" ", property.Modifiers) + " ");
+				declaration.Append(property.Type + " ");
+				declaration.Append(property.Identifier.Text + " { get; set; }");
+				break;
+
+			case FieldDeclarationSyntax field:
+				// Build the field declaration
+				declaration.Append(string.Join(" ", field.Modifiers) + " ");
+				declaration.Append(field.Declaration.Type + " ");
+				declaration.Append(string.Join(", ", field.Declaration.Variables.Select(v => v.Identifier.Text)));
+				break;
+
+			case ConstructorDeclarationSyntax constructor:
+				// Build the constructor signature
+				declaration.Append(string.Join(" ", constructor.Modifiers) + " ");
+				declaration.Append(constructor.Identifier.Text + constructor.ParameterList.ToString());
+				break;
+
+			case ClassDeclarationSyntax classDecl:
+				// Build the class declaration
+				declaration.Append(string.Join(" ", classDecl.Modifiers) + " class ");
+				declaration.Append(classDecl.Identifier.Text);
+				break;
+
+			case InterfaceDeclarationSyntax interfaceDecl:
+				// Build the interface declaration
+				declaration.Append(string.Join(" ", interfaceDecl.Modifiers) + " interface ");
+				declaration.Append(interfaceDecl.Identifier.Text);
+				break;
+
+			case EnumDeclarationSyntax enumDecl:
+				// Build the enum declaration
+				declaration.Append(string.Join(" ", enumDecl.Modifiers) + " enum ");
+				declaration.Append(enumDecl.Identifier.Text);
+				break;
+
+			default:
+				// For any other declaration, return the first line of the syntax
+				return member.GetText().ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None)[0].Trim();
+		}
+
+		return declaration.ToString().Trim();
+	}
+
+
+	// Helper method to check if a member is a valid one based on its type (public/private/all)
+	static bool IsValidMember(MemberDeclarationSyntax member, string memberType)
+	{
+		// Retrieve member's modifiers and compare with the provided memberType
+		var modifiers = member.Modifiers.Select(m => m.ValueText.ToLower()).ToList();
+
+		return memberType.ToLower() switch
+		{
+			"public" => modifiers.Contains("public"),
+			"private" => modifiers.Contains("private"),
+			_ => true // Default case for "all"
+		};
+	}
+
+	// Helper method to check if a member is a backing field (must be private and likely used as a field)
+	static bool IsBackingField(SyntaxNode member)
+	{
+		if (member is FieldDeclarationSyntax field)
+		{
+			// Check if the field is private and likely a backing field (you can enhance the logic here)
+			return field.Modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword));
+		}
+
+		return false;
+	}
+
+	// Helper method to check if the member has XML-style comments (triple slashes)
+	static bool HasComment(SyntaxNode member)
+	{
+		var trivia = member.GetLeadingTrivia();
+
+		return trivia.Any(t => t.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
+							   t.IsKind(SyntaxKind.MultiLineCommentTrivia) ||
+							   t.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia));
+	}
 }
