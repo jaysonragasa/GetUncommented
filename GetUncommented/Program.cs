@@ -56,6 +56,8 @@ class Program
 	// Process a single .cs file
 	static void ProcessFile(string filePath, string memberType, Dictionary<string, List<object>> uncommentedMembers)
 	{
+		Console.WriteLine($"Processing {filePath}");
+
 		var code = File.ReadAllText(filePath);
 		var tree = CSharpSyntaxTree.ParseText(code);
 		var root = tree.GetRoot();
