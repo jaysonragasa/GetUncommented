@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GetUncommented", "GetUncommented\GetUncommented.csproj", "{0F6ABAB9-4AEF-4A38-BB1B-16B003454883}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GetUncommented", "GetUncommented\GetUncommented.csproj", "{0F6ABAB9-4AEF-4A38-BB1B-16B003454883}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6331DF72-0506-45FF-9426-00513038600F}"
+	ProjectSection(SolutionItems) = preProject
+		GetUncommented.ps1 = GetUncommented.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
