@@ -41,7 +41,7 @@ GetUncommented.exe [options]
 
 ## Example Command
 
-```CMD
+```batch
 GetUncommented.exe /include:C:\Projects\ProjectA,C:\Projects\ProjectB /exclude:bin,obj /membertype:public
 ```
 
@@ -49,7 +49,8 @@ GetUncommented.exe /include:C:\Projects\ProjectA,C:\Projects\ProjectB /exclude:b
 
 The output will be saved in a JSON file named nocomments_yyyyMMdd_HHmmss.json, where yyyyMMdd_HHmmss is the current date and time. The output will contain the following structure:
 
-```{
+```json
+{
   "C:\\Projects\\ProjectA\\ClassA.cs": [
     {
       "Line": 10,
@@ -68,6 +69,220 @@ The output will be saved in a JSON file named nocomments_yyyyMMdd_HHmmss.json, w
   ]
 }
 ```
+
+## Adding Comments
+
+You can go check CoPilot and add comments for you. Here's a sample from our sample output json file
+```csharp
+/// <summary>
+/// Represents an easing function that combines BounceIn and BounceOut.
+/// </summary>
+public static readonly Easing BounceInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates from zero velocity.
+/// </summary>
+public static readonly Easing QuadIn;
+
+/// <summary>
+/// Represents an easing function that decelerates to zero velocity.
+/// </summary>
+public static readonly Easing QuadOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates.
+/// </summary>
+public static readonly Easing QuadInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates from zero velocity more sharply.
+/// </summary>
+public static readonly Easing QuartIn;
+
+/// <summary>
+/// Represents an easing function that decelerates to zero velocity more sharply.
+/// </summary>
+public static readonly Easing QuartOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates more sharply.
+/// </summary>
+public static readonly Easing QuartInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates exponentially.
+/// </summary>
+public static readonly Easing ExpoIn;
+
+/// <summary>
+/// Represents an easing function that decelerates exponentially.
+/// </summary>
+public static readonly Easing ExpoOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates exponentially.
+/// </summary>
+public static readonly Easing ExpoInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates with a backtracking effect.
+/// </summary>
+public static readonly Easing BackIn;
+
+/// <summary>
+/// Represents an easing function that decelerates with a backtracking effect.
+/// </summary>
+public static readonly Easing BackOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates with a backtracking effect.
+/// </summary>
+public static readonly Easing BackInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates very sharply.
+/// </summary>
+public static readonly Easing QuintIn;
+
+/// <summary>
+/// Represents an easing function that decelerates very sharply.
+/// </summary>
+public static readonly Easing QuintOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates very sharply.
+/// </summary>
+public static readonly Easing QuintInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates in a circular motion.
+/// </summary>
+public static readonly Easing CircIn;
+
+/// <summary>
+/// Represents an easing function that decelerates in a circular motion.
+/// </summary>
+public static readonly Easing CircOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates in a circular motion.
+/// </summary>
+public static readonly Easing CircInOut;
+
+/// <summary>
+/// Represents an easing function that accelerates with an elastic effect.
+/// </summary>
+public static readonly Easing ElasticIn;
+
+/// <summary>
+/// Represents an easing function that decelerates with an elastic effect.
+/// </summary>
+public static readonly Easing ElasticOut;
+
+/// <summary>
+/// Represents an easing function that accelerates and then decelerates with an elastic effect.
+/// </summary>
+public static readonly Easing ElasticInOut;
+
+```
+
+Just take one array from our json and ask CoPilot to add comments in XML documentation comment. Here's a portion from our sample JSON output file.
+```JSON
+"C:\\github\\maui-samples\\8.0\\Animations\\Animations\\Extensions\\ExtensionMethods.cs": [
+    {
+      "Line": 6,
+      "Member": "public static readonly Easing BounceInOut"
+    },
+    {
+      "Line": 13,
+      "Member": "public static readonly Easing QuadIn"
+    },
+    {
+      "Line": 18,
+      "Member": "public static readonly Easing QuadOut"
+    },
+    {
+      "Line": 23,
+      "Member": "public static readonly Easing QuadInOut"
+    },
+    {
+      "Line": 30,
+      "Member": "public static readonly Easing QuartIn"
+    },
+    {
+      "Line": 35,
+      "Member": "public static readonly Easing QuartOut"
+    },
+    {
+      "Line": 40,
+      "Member": "public static readonly Easing QuartInOut"
+    },
+    {
+      "Line": 47,
+      "Member": "public static readonly Easing ExpoIn"
+    },
+    {
+      "Line": 54,
+      "Member": "public static readonly Easing ExpoOut"
+    },
+    {
+      "Line": 61,
+      "Member": "public static readonly Easing ExpoInOut"
+    },
+    {
+      "Line": 77,
+      "Member": "public static readonly Easing BackIn"
+    },
+    {
+      "Line": 82,
+      "Member": "public static readonly Easing BackOut"
+    },
+    {
+      "Line": 87,
+      "Member": "public static readonly Easing BackInOut"
+    },
+    {
+      "Line": 95,
+      "Member": "public static readonly Easing QuintIn"
+    },
+    {
+      "Line": 100,
+      "Member": "public static readonly Easing QuintOut"
+    },
+    {
+      "Line": 105,
+      "Member": "public static readonly Easing QuintInOut"
+    },
+    {
+      "Line": 113,
+      "Member": "public static readonly Easing CircIn"
+    },
+    {
+      "Line": 118,
+      "Member": "public static readonly Easing CircOut"
+    },
+    {
+      "Line": 123,
+      "Member": "public static readonly Easing CircInOut"
+    },
+    {
+      "Line": 131,
+      "Member": "public static readonly Easing ElasticIn"
+    },
+    {
+      "Line": 140,
+      "Member": "public static readonly Easing ElasticOut"
+    },
+    {
+      "Line": 149,
+      "Member": "public static readonly Easing ElasticInOut"
+    }
+  ],
+```
+
+And this is the actual code
+
+[ExtensionMethods.cs](https://github.com/dotnet/maui-samples/blob/main/8.0/Animations/Animations/Extensions/ExtensionMethods.cs)
 
 
 # Contributing
